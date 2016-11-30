@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>画圆</title>
+ 
+</head>
+<body>
+    
+<div>怎么实现在一块画布上，画任意个圆不相交，且圆不能碰边界，要求做到时间和空间的平衡</div>
+<canvas id="myCanvas" width="800" height="600"></canvas>
+<script>
+
+(function () {
+    
+    var drawCircleFn = function(id,number,opt){
+            var _t = this;
+            _t.option = {
+                "number" : number,
+                "space" : 10,
+                "minCircum" : 5,
+                "maxCircum" : 50,
+                "time":new Date().getTime()
+            }
+            _t.circumArray = [];
+            //如果传了其他参数则浅拷贝, 暂时不判断类型
+            if(opt){
+                    for(var key in _t.option){
+                        if(opt[key]!=="undefined"){
+                            _t.option[key] = opt[key];
+                        }
+                    }
+            }
+  
+            _t.el=document.getElementById("myCanvas");
+            console.log(_t.el);
+            _t.ctx=_t.el.getContext("2d");
+            _t.drawInit();
+    }
+    
+    drawCircleFn.prototype = {
+                            drawInit : function(){
+                                        var _t = this;
+                                        var o = _t.option;
+                                        var elWidth = _t.el.offsetWidth;
+                                        var elHeight = _t.el.offsetHeight;
+
+
+                                        while(o.number>0){
+                                            //获取随机周长
+                                            var r = _t.getRandomArbitrary(o.minCircum,o.maxCircum);
+
+                                            //获取随机X轴, X轴加周长不能越界
+                                            var x = _t.getRandomArbitrary(o.space+r,elWidth-o.space-r);
+                                            
+                                            //获取随机Y轴, Y轴加周长不能越界
+                                            var y = _t.getRandomArbitrary(o.space+r,elHeight-o.space-r);
+
+                                            //记录圆形数据并处理相交情况
+                                            _t.recordArea(x,y,r);
+                                             
+                                            o.number--;
+                                       }
+
+                                       _t.option.time = new Date().getTime() - _t.option.time;
+
+                                       console.log(_t.option.time);
+                                        
+                            },
+                            
+                            drawCircle : function(x,y,r){
+                                                    var _t = this;
+                                                    console.log(x+"|"+y+"|"+r);
+                                                    _t.ctx.beginPath();
+                                                  
+                                                   _t.ctx.arc(x,y,r,0,2*Math.PI);
+                                                    _t.ctx.stroke();
+                                                },
+                            recordArea : function(x,y,r){
+                                                    var _t = this;
+                                                    var circumData = {
+                                                            "x" : x,
+                                                            "y" : y,
+                                                            "r" : r
+                                                    }
+                                                    if(_t.circumArray.length==0){
+                                                            _t.circumArray.push(circumData);
+                                                            _t.drawCircle(x,y,r);
+                                                    }else{
+                                                            //检查是否有圆形相交, 如果有则处理
+                                                            _t.checkCircum(circumData);
+
+                                                    }
+
+
+                                                    
+                                                 },
+                         checkCircum : function(data){
+                                    var _t = this, cData = data;
+                                     
+                                     for(var i=0;i<_t.circumArray.length;i++){
+                                            var ca = _t.circumArray[i];
+                                            
+
+                                             //使用勾股定理判断是否相交
+                                            if(_t.pythagorean(data.x-ca.x,data.y-ca.y,data.r+ca.r)){
+                                           
+                                                console.log("有缘相交");
+
+                                                //相交的情况就把新圆处理一下
+                                                cData =  _t.moveCircum(cData,_t.circumArray[i]);
+                                            }
+ 
+                                     }
+                                     //新圆不OK,跳出
+                                     if(!cData){
+                                        return false;
+                                     }
+                                     _t.circumArray.push(cData);
+                                     _t.drawCircle(cData.x,cData.y,cData.r);
+
+                         },
+                         moveCircum : function(c1,c2){
+                                var _t = this, mData = c1;
+  
+                                //可以挽救的圆缩小半径, 简单粗暴一点直接给最小半径好了
+                                if(mData.r>_t.option.minCircum){
+                                        mData.r = _t.option.minCircum;
+
+                                        //想通过移动来处理,但是问题更多
+                                        //mData.x = Math.floor(Math.pow(Math.pow(c1.r + c2.r,2) - Math.pow(c1.y - c2.y,2),1/2));
+                                        console.log("========="+mData.x);
+                                }
+
+
+                                //如果缩小半径还相交重新生成通过的概率比较大,移动可能又和其他圆相交了
+                                if(_t.pythagorean(c1.x-c2.x,c1.y-c2.y,c1.r + c2.r)){
+                                         _t.number++;
+                                        return false;
+                                }
+                                
+ 
+                                return mData;
+
+                         },
+                         getRandomArbitrary : function(min, max) {
+                                            return Math.floor(Math.random() * (max - min) + min);
+                            },
+                         pythagorean : function(a,b,c){
+                                return Math.pow(Math.abs(a),2)+Math.pow(Math.abs(b),2)<Math.pow(c,2);
+                         }
+    }
+    
+      
+
+window.drawCircleFn = drawCircleFn;
+})();
+
+/*===========================
+兼容AMD或NODE
+===========================*/
+if (typeof(module) !== 'undefined')
+{
+    module.exports = window.drawCircleFn;
+}
+else if (typeof define === 'function' && define.amd) {
+    define([], function () {
+        'use strict';
+        return window.drawCircleFn;
+    });
+}
+
+
+var c = new drawCircleFn("myCanvas",1000);
+
+
+</script>
+
+</body>
+</html>
